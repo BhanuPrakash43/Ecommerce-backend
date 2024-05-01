@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv").config();
-// const Stripe = require('stripe')
 
 const app = express();
 app.use(cors());
@@ -104,59 +103,71 @@ app.post("/uploadProduct", async (req, res) => {
   res.send({ message: "Upload successfully" });
 });
 
-//
+// Get all products
+
+// app.get("/product", async (req, res) => {
+//   const data = await productModel.find({});
+//   res.send(JSON.stringify(data));
+// });
+
+// Retrieve only IDs of products
+
 app.get("/product", async (req, res) => {
-  const data = await productModel.find({});
+  try {
+    const data = await productModel.find({}, '_id'); // Only retrieve the _id field
+    const productIds = data.map(product => product._id); // Extract only the _id field from each product
+    res.send(productIds);
+  } catch (error) {
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+app.get("/product/:id", async (req, res) => {
+  const productId = req.params.id;
+  const data = await productModel.findOne({ _id: productId });
   res.send(JSON.stringify(data));
 });
 
-/*****payment getWay */
-// console.log(process.env.STRIPE_SECRET_KEY)
+// Update Product Endpoint
+app.put("/product/:id", async (req, res) => {
+  const productId = req.params.id;
+  const newData = req.body;
 
-// const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY)
+  try {
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      productId,
+      newData,
+      { new: true }
+    );
+    if (!updatedProduct) {
+      return res.status(404).send({ message: "Product not found" });
+    }
+    res.send({
+      message: "Product updated successfully",
+      product: updatedProduct,
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
 
-// app.post("/create-checkout-session",async(req,res)=>{
+// Delete Product Endpoint
+app.delete("/product/:id", async (req, res) => {
+  const productId = req.params.id;
 
-//      try{
-//       const params = {
-//           submit_type : 'pay',
-//           mode : "payment",
-//           payment_method_types : ['card'],
-//           billing_address_collection : "auto",
-//           shipping_options : [{shipping_rate : "shr_1N0qDnSAq8kJSdzMvlVkJdua"}],
-
-//           line_items : req.body.map((item)=>{
-//             return{
-//               price_data : {
-//                 currency : "inr",
-//                 product_data : {
-//                   name : item.name,
-//                   // images : [item.image]
-//                 },
-//                 unit_amount : item.price * 100,
-//               },
-//               adjustable_quantity : {
-//                 enabled : true,
-//                 minimum : 1,
-//               },
-//               quantity : item.qty
-//             }
-//           }),
-
-//           success_url : `${process.env.FRONTEND_URL}/success`,
-//           cancel_url : `${process.env.FRONTEND_URL}/cancel`,
-
-//       }
-
-//       const session = await stripe.checkout.sessions.create(params)
-//       // console.log(session)
-//       res.status(200).json(session.id)
-//      }
-//      catch (err){
-//         res.status(err.statusCode || 500).json(err.message)
-//      }
-
-// })
+  try {
+    const deletedProduct = await productModel.findByIdAndDelete(productId);
+    if (!deletedProduct) {
+      return res.status(404).send({ message: "Product not found" });
+    }
+    res.send({
+      message: "Product deleted successfully",
+      product: deletedProduct,
+    });
+  } catch (error) {
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
 
 //server is ruuning
 app.listen(PORT, () => console.log("server is running at port : " + PORT));
